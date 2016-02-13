@@ -126,4 +126,10 @@ class SQLObject
       return self
     end
   end
+
+  def self.destroy_all
+    self.all.each do |entry|
+      entry.destroy
+    end
+  end
 end
