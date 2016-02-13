@@ -91,6 +91,7 @@ class SQLObject
 
     SQL
     self.id = DBConnection.last_insert_row_id
+    self
   end
 
   def update
@@ -106,9 +107,23 @@ class SQLObject
       WHERE
         id = ?
     SQL
+    self
   end
 
   def save
     self.class.find(id) ? update : insert
+  end
+
+  def destroy
+    if self.class.find(id)
+      DBConnection.execute(<<-SQL, id)
+        DELETE
+        FROM
+          #{self.class.table_name}
+        WHERE
+          id = ?
+      SQL
+      return self
+    end
   end
 end
