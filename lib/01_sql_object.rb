@@ -1,4 +1,6 @@
 require_relative 'db_connection'
+require_relative '02_searchable'
+require_relative '03_associatable'
 require 'active_support/inflector'
 
 class SQLObject
