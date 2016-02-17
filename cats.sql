@@ -23,7 +23,9 @@ CREATE TABLE houses (
 INSERT INTO
   houses (id, address)
 VALUES
-  (1, "26th and Guerrero"), (2, "Dolores and Market");
+  (1, "26th and Guerrero"),
+  (2, "Dolores and Market"),
+  (3, "123 4th Street");
 
 INSERT INTO
   humans (id, fname, lname, house_id)
@@ -31,7 +33,7 @@ VALUES
   (1, "Devon", "Watts", 1),
   (2, "Matt", "Rubens", 1),
   (3, "Ned", "Ruggeri", 2),
-  (4, "Catless", "Human", NULL);
+  (4, "Catless", "Human", 3);
 
 INSERT INTO
   cats (id, name, owner_id)

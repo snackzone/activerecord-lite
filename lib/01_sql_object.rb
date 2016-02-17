@@ -114,7 +114,7 @@ class SQLObject
     self.class.find(id) ? update : insert
   end
 
-  def destroy
+  def destroy!
     if self.class.find(id)
       DBConnection.execute(<<-SQL, id)
         DELETE
@@ -127,9 +127,9 @@ class SQLObject
     end
   end
 
-  def self.destroy_all
+  def self.destroy_all!
     self.all.each do |entry|
-      entry.destroy
+      entry.destroy!
     end
   end
 end

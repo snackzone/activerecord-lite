@@ -11,11 +11,13 @@ describe 'AssocOptions' do
     end
 
     it 'allows overrides' do
-      options = BelongsToOptions.new('owner',
-                                     foreign_key: :human_id,
-                                     class_name: 'Human',
-                                     primary_key: :human_id
-      )
+      options =
+        BelongsToOptions.new(
+          'owner',
+          foreign_key: :human_id,
+          class_name: 'Human',
+          primary_key: :human_id
+        )
 
       expect(options.foreign_key).to eq(:human_id)
       expect(options.class_name).to eq('Human')
@@ -210,6 +212,42 @@ describe 'Associatable' do
 
       expect(house).to be_instance_of(House)
       expect(house.address).to eq('26th and Guerrero')
+    end
+  end
+
+  describe '#has_many_through' do
+    before(:all) do
+      class House
+        has_many_through :cats, :humans, :cats
+
+        self.finalize!
+      end
+    end
+
+    let(:house) { House.find(1) }
+
+    it 'adds a getter method' do
+      expect(house).to respond_to(:cats)
+    end
+
+    it 'fetches associated `cats` for a `House`' do
+      cats = house.cats
+
+      expect(cats.length).to eq(2)
+
+      expected_cat_names = %w(Breakfast Earl)
+      2.times do |i|
+        cat = cats[i]
+
+        expect(cat).to be_instance_of(Cat)
+        expect(cat.name).to eq(expected_cat_names[i])
+      end
+    end
+
+    it 'returns an empty array if no associated items' do
+      catless_house = House.find(3)
+      p catless_house
+      expect(catless_house.cats).to eq([])
     end
   end
 end

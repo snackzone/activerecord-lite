@@ -1,5 +1,6 @@
 require_relative '02_searchable'
 require 'active_support/inflector'
+# require 'byebug'
 
 class AssocOptions
   attr_accessor(
@@ -116,8 +117,12 @@ module Associatable
   end
 
   def has_many_through(name, through_name, source_name)
+
+    # debugger
+
     through_options = assoc_options[through_name]
     define_method(name) do
+      # debugger
       source_options =
         through_options.model_class.assoc_options[source_name]
 

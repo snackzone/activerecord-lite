@@ -236,5 +236,27 @@ describe SQLObject do
         human.save
       end
     end
+
+    describe '#destroy!' do
+      it 'removes the record from the DB' do
+        cat = Cat.new
+        cat.name = "Toy Cat"
+        cat.save
+        id = cat.id
+        cat.destroy!
+        expect(Cat.find(id)).to be_nil
+      end
+    end
+
+    describe '#destroy_all!' do
+      class House < SQLObject
+      end
+      House.finalize!
+
+      it 'does not drop the DB table' do
+        House.destroy_all!
+        expect(House.all).to eq([])
+      end
+    end
   end
 end
