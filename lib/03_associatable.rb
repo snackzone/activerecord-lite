@@ -1,6 +1,5 @@
 require_relative '02_searchable'
 require 'active_support/inflector'
-require 'byebug'
 
 class AssocOptions
   attr_accessor(
@@ -28,7 +27,6 @@ end
 
 class HasManyOptions < AssocOptions
   def initialize(name, self_class_name, options = {})
-    debugger
     @primary_key = options[:primary_key] || :id
     @foreign_key = options[:foreign_key] || "#{self_class_name.to_s.underscore}_id".to_sym
     @class_name = options[:class_name] || name.to_s.singularize.camelcase
@@ -58,7 +56,6 @@ module Associatable
   end
 
   def has_many(name, options = {})
-    debugger
     options = HasManyOptions.new(name, self.to_s, options)
     assoc_options[name] = options
 
@@ -87,6 +84,7 @@ module Associatable
     through_options = assoc_options[through_name]
 
     define_method(name) do
+
       source_options =
         through_options.model_class.assoc_options[source_name]
 
@@ -99,6 +97,7 @@ module Associatable
       source_fk = source_options.foreign_key
 
       key_val = self.send(through_fk)
+
       results = DBConnection.execute(<<-SQL, key_val)
         SELECT
           #{source_table}.*
@@ -107,7 +106,7 @@ module Associatable
         JOIN
           #{source_table}
         ON
-          #{source_table}.#{source_fk} = #{through_table}.#{source_pk}
+          #{source_table}.#{source_pk} = #{through_table}.#{source_fk}
         WHERE
           #{through_table}.#{through_pk} = ?
       SQL
@@ -117,10 +116,8 @@ module Associatable
   end
 
   def has_many_through(name, through_name, source_name)
-    debugger
     through_options = assoc_options[through_name]
     define_method(name) do
-      debugger
       source_options =
         through_options.model_class.assoc_options[source_name]
 

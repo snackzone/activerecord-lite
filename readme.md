@@ -11,7 +11,7 @@ It converts tables in a SQLite database into instances of the SQLObject class.
 * Update
 * Destroy
 
-###Also has Rails table associations:
+###Also builds Rails table associations:
 * Belongs to
 * Has many
 * Has one through
