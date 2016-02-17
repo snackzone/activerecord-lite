@@ -1,9 +1,12 @@
 require_relative 'db_connection'
 require_relative '02_searchable'
 require_relative '03_associatable'
+require_relative 'relation'
 require 'active_support/inflector'
 
 class SQLObject
+  extend Associatable
+
   def self.columns
     @table ||= DBConnection.execute2(<<-SQL)
       SELECT
@@ -45,9 +48,12 @@ class SQLObject
   end
 
   def self.parse_all(results)
-    results.map do |hash|
-      self.new(hash)
+    relation = Relation.new(self)
+    results.each do |result|
+      relation << self.new(result)
     end
+
+    relation
   end
 
   def self.find(id)
@@ -133,5 +139,9 @@ class SQLObject
     self.all.each do |entry|
       entry.destroy!
     end
+  end
+
+  def self.where(params)
+    Relation.new(self).where(params)
   end
 end

@@ -34,3 +34,7 @@ See the demo file for the pre-built associations.
 
 ###Did I mention it's searchable?
 * SQLObject#where takes a params hash and uses it to query the db, returning all matches.
+
+###Coming Soon
+* Relations!
+* Migrations!
