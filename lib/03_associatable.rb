@@ -1,6 +1,5 @@
 require_relative '02_searchable'
 require 'active_support/inflector'
-require 'byebug'
 
 class AssocOptions
   attr_accessor(
@@ -111,7 +110,6 @@ module Associatable
         WHERE
           #{through_table}.#{through_pk} = ?
       SQL
-      debugger
       source_options.model_class.parse_all(results).first
     end
   end

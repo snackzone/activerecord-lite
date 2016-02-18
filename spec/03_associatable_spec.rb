@@ -159,9 +159,9 @@ describe 'Associatable' do
       expect(humans[0].fname).to eq('Ned')
     end
 
-    it 'returns an empty array if no associated items' do
+    it 'returns an empty relation if no associated items' do
       catless_human = Human.find(4)
-      expect(catless_human.cats).to eq([])
+      expect(catless_human.cats.length).to eq(0)
     end
   end
 
@@ -244,10 +244,10 @@ describe 'Associatable' do
       end
     end
 
-    it 'returns an empty array if no associated items' do
+    it 'returns an empty relation if no associated items' do
       catless_house = House.find(3)
       p catless_house
-      expect(catless_house.cats).to eq([])
+      expect(catless_house.cats.length).to eq(0)
     end
   end
 end

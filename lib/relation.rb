@@ -1,6 +1,5 @@
 require_relative 'db_connection'
 require_relative '01_sql_object'
-require 'byebug'
 
 class Relation
   attr_reader :klass, :collection
@@ -22,14 +21,6 @@ class Relation
 
   def to_a
     self.load.collection
-  end
-
-  def first
-    self.to_a.first
-  end
-
-  def inspect
-    self.to_a.inspect
   end
 
   def where_params_hash
@@ -55,6 +46,7 @@ class Relation
   end
 
   def load
+
     results = DBConnection.execute(<<-SQL, *sql_params[:values])
       SELECT
         #{self.table_name}.*
@@ -68,5 +60,9 @@ class Relation
 
   def parse_all(attributes)
     klass.parse_all(attributes).where(where_params_hash)
+  end
+
+  def method_missing(method, *args, &block)
+    self.to_a.send(method, *args)
   end
 end
