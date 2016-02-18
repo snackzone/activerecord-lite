@@ -47,7 +47,7 @@ class SQLObject
   end
 
   def self.parse_all(results)
-    relation = Relation.new(self, true)
+    relation = SQLRelation.new(self, true)
     results.each do |result|
       relation << self.new(result)
     end
@@ -141,6 +141,6 @@ class SQLObject
   end
 
   def self.where(params)
-    Relation.new(self).where(params)
+    SQLRelation.new(self).where(params)
   end
 end

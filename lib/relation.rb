@@ -1,7 +1,7 @@
 require_relative 'db_connection'
 require_relative 'sql_object'
 
-class Relation
+class SQLRelation
   attr_reader :klass, :collection
   attr_accessor :loaded
 
