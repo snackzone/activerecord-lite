@@ -3,10 +3,12 @@ require_relative '01_sql_object'
 
 class Relation
   attr_reader :klass, :collection
+  attr_accessor :loaded
 
-  def initialize(klass)
+  def initialize(klass, loaded=false)
     @klass = klass
     @collection = []
+    @loaded = loaded
   end
 
   def table_name
@@ -46,15 +48,19 @@ class Relation
   end
 
   def load
-    results = DBConnection.execute(<<-SQL, *sql_params[:values])
-      SELECT
-        #{self.table_name}.*
-      FROM
-        #{self.table_name}
-      #{sql_params[:where]}
-        #{sql_params[:params]};
-    SQL
-    parse_all(results)
+    if !loaded
+      results = DBConnection.execute(<<-SQL, *sql_params[:values])
+        SELECT
+          #{self.table_name}.*
+        FROM
+          #{self.table_name}
+        #{sql_params[:where]}
+          #{sql_params[:params]};
+      SQL
+      parse_all(results)
+    else
+      self
+    end
   end
 
   def parse_all(attributes)
