@@ -62,6 +62,6 @@ class Relation
   end
 
   def method_missing(method, *args, &block)
-    self.to_a.send(method, *args)
+    self.to_a.send(method, *args, &block)
   end
 end

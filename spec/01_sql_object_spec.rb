@@ -255,7 +255,7 @@ describe SQLObject do
 
       it 'does not drop the DB table' do
         House.destroy_all!
-        expect(House.all).to eq([])
+        expect(House.all.length).to eq(0)
       end
     end
   end
