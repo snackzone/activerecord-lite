@@ -36,12 +36,12 @@ See the demo file for the pre-built associations.
 * Has many through
 
 ###Did I mention it's searchable?
-* SQLObject#where takes a params hash and uses it to query the DB, returning all matches.
-* Where method calls are:
-  * stackable, as each returns a Relation instance
-  * lazy, as queries only fire when the Relation is coerced into an array
-* Relations also cache queries. Storing a relation as a variable and manipulating it
-in multiple places only results in one query to the DB.
+* SQLObject#where takes a params hash.
+* #where method calls are:
+  * Stackable. SQLObject#where returns a Relation instance
+  * Manipulatable. SQLRelation instances respond to all Array instance methods
+  * Lazy. Queries only fire when necessary, i.e. when the SQLRelation is coerced into an array
+  (you can also call SQLRelation#load to force this).
 
 ###Coming Soon
 * [x] Relations!
