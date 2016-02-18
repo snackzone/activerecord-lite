@@ -1,6 +1,5 @@
 require_relative 'db_connection'
-require_relative '02_searchable'
-require_relative '03_associatable'
+require_relative 'associatable'
 require_relative 'relation'
 require 'active_support/inflector'
 

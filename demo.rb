@@ -1,4 +1,4 @@
-require_relative 'lib/01_sql_object'
+require_relative 'lib/sql_object'
 
 DEMO_DB_FILE = 'cats.db'
 DEMO_SQL_FILE = 'cats.sql'
