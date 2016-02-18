@@ -62,17 +62,7 @@ module Associatable
     define_method(name) do
       target_key_value = self.send(options.primary_key)
       return nil if target_key_value.nil?
-
-      results = DBConnection.execute(<<-SQL)
-      SELECT
-        *
-      FROM
-        #{options.table_name}
-      WHERE
-        #{options.foreign_key} = #{target_key_value};
-      SQL
-
-      options.model_class.parse_all(results)
+      options.model_class.where(options.foreign_key => target_key_value)
     end
   end
 

@@ -46,7 +46,6 @@ class Relation
   end
 
   def load
-
     results = DBConnection.execute(<<-SQL, *sql_params[:values])
       SELECT
         #{self.table_name}.*
