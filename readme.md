@@ -22,7 +22,9 @@ The demo contains a small database and the following classes, which inherit from
 
 See the demo file for the pre-built associations.
 
-If you fiddle with the code, you can run the tests to make sure you didn't break anything 
+###Tested and true
+
+If you fiddle with the code, you can run the tests to make sure you didn't break anything
 (bundle exec rspec spec).
 
 ###All of your favorite methods are present, including:
