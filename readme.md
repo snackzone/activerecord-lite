@@ -44,7 +44,7 @@ See the demo file for the pre-built associations.
 in multiple places only results in one query to the DB.
 
 ###Coming Soon
-[x] Relations!
-[ ] Relation#includes
-[ ] Relation search methods
-[ ] Migrations!
+* [x] Relations!
+* [ ] Relation#includes
+* [ ] Relation search methods
+* [ ] Migrations!
