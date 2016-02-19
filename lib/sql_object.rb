@@ -36,18 +36,8 @@ class SQLObject
     @table_name ||= self.to_s.downcase.tableize
   end
 
-  def self.all
-    results = DBConnection.execute(<<-SQL)
-      SELECT
-        *
-      FROM
-        #{self.table_name};
-    SQL
-    parse_all(results)
-  end
-
   def self.parse_all(results)
-    relation = SQLRelation.new(self, true)
+    relation = SQLRelation.new(klass: self, loaded: true)
     results.each do |result|
       relation << self.new(result)
     end
@@ -141,6 +131,14 @@ class SQLObject
   end
 
   def self.where(params)
-    SQLRelation.new(self).where(params)
+    SQLRelation.new(klass: self).where(params)
+  end
+
+  def self.all
+    self.where({})
+  end
+
+  def self.count
+    self.all.count
   end
 end

@@ -2,13 +2,21 @@ require_relative 'db_connection'
 require_relative 'sql_object'
 
 class SQLRelation
-  attr_reader :klass, :collection
-  attr_accessor :loaded
+  attr_reader :klass, :collection, :loaded, :sql_count
 
-  def initialize(klass, loaded=false)
-    @klass = klass
-    @collection = []
-    @loaded = loaded
+  def initialize(options)
+    defaults =
+    {
+      klass: nil,
+      loaded: false,
+      count: false,
+      collection: []
+    }
+
+    @klass      = options[:klass]
+    @collection = options[:collection] || defaults[:collection]
+    @loaded     = options[:loaded]     || defaults[:loaded]
+    @sql_count  = options[:count]      || defaults[:count]
   end
 
   def table_name
@@ -47,17 +55,23 @@ class SQLRelation
       values: values }
   end
 
+  def count
+    @sql_count = true
+    load
+  end
+
   def load
     if !loaded
       results = DBConnection.execute(<<-SQL, *sql_params[:values])
         SELECT
-          #{self.table_name}.*
+          #{self.sql_count ? "COUNT(*)" : self.table_name + ".*"}
         FROM
           #{self.table_name}
         #{sql_params[:where]}
           #{sql_params[:params]};
       SQL
-      parse_all(results)
+
+      self.sql_count ? results.first.values.first : parse_all(results)
     else
       self
     end
