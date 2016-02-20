@@ -38,20 +38,12 @@ module Associatable
     assoc_options[name] = options
 
     define_method(name) do
-      puts "LOADING #{options.table_name}"
       foreign_key_value = self.send(options.foreign_key)
       return nil if foreign_key_value.nil?
 
-      results = DBConnection.execute(<<-SQL)
-      SELECT
-        *
-      FROM
-        #{options.table_name}
-      WHERE
-        #{options.primary_key} = #{foreign_key_value};
-      SQL
-
-      options.model_class.new(results.first)
+      options.model_class
+             .where(options.primary_key => foreign_key_value)
+             .first
     end
   end
 
@@ -60,10 +52,11 @@ module Associatable
     assoc_options[name] = options
 
     define_method(name) do
-      puts "LOADING #{options.table_name}"
       target_key_value = self.send(options.primary_key)
       return nil if target_key_value.nil?
-      options.model_class.where(options.foreign_key => target_key_value)
+      options.model_class
+             .where(options.foreign_key => target_key_value)
+             .to_a
     end
   end
 
@@ -75,34 +68,13 @@ module Associatable
     through_options = assoc_options[through_name]
 
     define_method(name) do
-
       source_options =
         through_options.model_class.assoc_options[source_name]
-
-      through_table = through_options.table_name
       through_pk = through_options.primary_key
-      through_fk = through_options.foreign_key
-
-      source_table = source_options.table_name
-      source_pk = source_options.primary_key
-      source_fk = source_options.foreign_key
-
       key_val = self.send(through_fk)
-
-      puts "LOADING #{source_table}"
-      results = DBConnection.execute(<<-SQL, key_val)
-        SELECT
-          #{source_table}.*
-        FROM
-          #{through_table}
-        JOIN
-          #{source_table}
-        ON
-          #{source_table}.#{source_pk} = #{through_table}.#{source_fk}
-        WHERE
-          #{through_table}.#{through_pk} = ?
-      SQL
-      source_options.model_class.parse_all(results).first
+      
+      source_options.model_class.includes(through_options.model_class)
+                                .where(through_pk => key_val).first
     end
   end
 
