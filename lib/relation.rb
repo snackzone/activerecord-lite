@@ -123,21 +123,21 @@ class SQLRelation
     assoc_type = assoc_options.class
 
     if assoc_type == HasManyOptions
-      p = proc do
-        included.select do |i_sql_obj|
-          i_sql_obj.send(assoc_options.foreign_key) == self.send(assoc_options.primary_key)
-        end
-      end
+      i_send = assoc_options.foreign_key
+      b_send = assoc_options.primary_key
     elsif assoc_type == BelongsToOptions
-      p = proc do
-        included.select do |i_sql_obj|
-          i_sql_obj.send(assoc_options.foreign_key) == self.send(assoc_options.primary_key)
-        end
+      i_send = assoc_options.primary_key
+      b_send = assoc_options.foreign_key
+    end
+
+    match = proc do
+      included.select do |i_sql_obj|
+        i_sql_obj.send(i_send) == self.send(b_send)
       end
     end
 
     base.collection.each do |b_sql_obj|
-      SQLObject.define_singleton_method_by_proc(b_sql_obj, base.includes_params, p)
+      SQLObject.define_singleton_method_by_proc(b_sql_obj, base.includes_params, match)
     end
   end
 
