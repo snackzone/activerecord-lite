@@ -87,7 +87,11 @@ class SQLRelation
 
     results = results || self
 
-    includes_params ? load_includes(results) : results
+    if includes_params
+      results = load_includes(results)
+    end
+
+    results
   end
 
   def load_includes(relation)
@@ -95,17 +99,21 @@ class SQLRelation
       puts "LOADING #{includes_params.to_s}"
       assoc = klass.assoc_options[includes_params]
       f_k = assoc.foreign_key
-      table_name = assoc.table_name
+      p_k = assoc.primary_key
+      includes_table = assoc.table_name.to_s
       in_ids = relation.collection.map do |sqlobject|
         sqlobject.id
       end.join(", ")
+
+      has_many = assoc.class == HasManyOptions
+
       results = DBConnection.execute(<<-SQL)
         SELECT
-          #{table_name}.*
+          #{includes_table}.*
         FROM
-          #{table_name}
+          #{includes_table}
         WHERE
-          #{table_name}.#{f_k}
+          #{includes_table}.#{has_many ? f_k : p_k}
         IN
           (#{in_ids});
       SQL
@@ -120,22 +128,26 @@ class SQLRelation
     base.included_relation = included
 
     assoc_options = base.klass.assoc_options[base.includes_params]
-    assoc_type = assoc_options.class
+    has_many = assoc_options.class == HasManyOptions
 
-    if assoc_type == HasManyOptions
+    if has_many
       i_send = assoc_options.foreign_key
       b_send = assoc_options.primary_key
-    elsif assoc_type == BelongsToOptions
+    else
       i_send = assoc_options.primary_key
       b_send = assoc_options.foreign_key
     end
 
     match = proc do
-      included.select do |i_sql_obj|
+      selection = included.select do |i_sql_obj|
         i_sql_obj.send(i_send) == self.send(b_send)
       end
+
+      has_many ? selection : selection.first
     end
 
+    #we monkey-patch the association method for each SQLObject in the
+    #collection so that it points to our cached relation and doesn't fire a query.
     base.collection.each do |b_sql_obj|
       SQLObject.define_singleton_method_by_proc(b_sql_obj, base.includes_params, match)
     end

@@ -38,6 +38,7 @@ module Associatable
     assoc_options[name] = options
 
     define_method(name) do
+      puts "LOADING #{options.table_name}"
       foreign_key_value = self.send(options.foreign_key)
       return nil if foreign_key_value.nil?
 
@@ -59,6 +60,7 @@ module Associatable
     assoc_options[name] = options
 
     define_method(name) do
+      puts "LOADING #{options.table_name}"
       target_key_value = self.send(options.primary_key)
       return nil if target_key_value.nil?
       options.model_class.where(options.foreign_key => target_key_value)
@@ -87,6 +89,7 @@ module Associatable
 
       key_val = self.send(through_fk)
 
+      puts "LOADING #{source_table}"
       results = DBConnection.execute(<<-SQL, key_val)
         SELECT
           #{source_table}.*
@@ -118,6 +121,8 @@ module Associatable
       source_fk = source_options.foreign_key
 
       key_val = self.send(through_pk)
+
+      puts "LOADING #{source_table}"
       results = DBConnection.execute(<<-SQL, key_val)
         SELECT
           #{source_table}.*
