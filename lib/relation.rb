@@ -3,6 +3,7 @@ require_relative 'sql_object'
 
 class SQLRelation
   attr_reader :klass, :collection, :loaded, :sql_count
+  attr_accessor :included_relation
 
   def initialize(options)
     defaults =
@@ -60,25 +61,88 @@ class SQLRelation
     load
   end
 
+  def includes(klass)
+    @includes_params = klass
+    self
+  end
+
+  def includes_params
+    @includes_params ||= nil
+  end
+
   def load
     if !loaded
+      puts "LOADING #{table_name}"
       results = DBConnection.execute(<<-SQL, *sql_params[:values])
         SELECT
-          #{self.sql_count ? "COUNT(*)" : self.table_name + ".*"}
+          #{self.sql_count ? "COUNT(*)" : self.table_name.to_s + ".*"}
         FROM
           #{self.table_name}
         #{sql_params[:where]}
           #{sql_params[:params]};
       SQL
 
-      self.sql_count ? results.first.values.first : parse_all(results)
-    else
-      self
+      results = self.sql_count ? results.first.values.first : parse_all(results)
+    end
+
+    results = results || self
+
+    includes_params ? load_includes(results) : results
+  end
+
+  def load_includes(relation)
+    if relation.klass.has_association?(includes_params)
+      puts "LOADING #{includes_params.to_s}"
+      assoc = klass.assoc_options[includes_params]
+      f_k = assoc.foreign_key
+      table_name = assoc.table_name
+      in_ids = relation.collection.map do |sqlobject|
+        sqlobject.id
+      end.join(", ")
+      results = DBConnection.execute(<<-SQL)
+        SELECT
+          #{table_name}.*
+        FROM
+          #{table_name}
+        WHERE
+          #{table_name}.#{f_k}
+        IN
+          (#{in_ids});
+      SQL
+      included = assoc.model_class.parse_all(results)
+      SQLRelation.build_association(relation, included)
+    end
+
+    relation
+  end
+
+  def self.build_association(base, included)
+    base.included_relation = included
+
+    assoc_options = base.klass.assoc_options[base.includes_params]
+    assoc_type = assoc_options.class
+
+    if assoc_type == HasManyOptions
+      p = proc do
+        included.select do |i_sql_obj|
+          i_sql_obj.send(assoc_options.foreign_key) == self.send(assoc_options.primary_key)
+        end
+      end
+    elsif assoc_type == BelongsToOptions
+      p = proc do
+        included.select do |i_sql_obj|
+          i_sql_obj.send(assoc_options.foreign_key) == self.send(assoc_options.primary_key)
+        end
+      end
+    end
+
+    base.collection.each do |b_sql_obj|
+      SQLObject.define_singleton_method_by_proc(b_sql_obj, base.includes_params, p)
     end
   end
 
   def parse_all(attributes)
-    klass.parse_all(attributes).where(where_params_hash)
+    klass.parse_all(attributes).where(where_params_hash).includes(includes_params)
   end
 
   def method_missing(method, *args, &block)
