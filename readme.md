@@ -48,8 +48,12 @@ If you fiddle with the code, you can run the tests to make sure you didn't break
   * Lazy. Queries only fire when necessary, i.e. when the SQLRelation is coerced into an array
   (you can also call SQLRelation#load to force this).
 
+###Eager loading reduces queries
+* You can use SQLRelation#includes belongs_to and has_many relations to preload your associations
+  * Reduces your query count from (n + 1) to 2.
+
 ###Coming Soon
 * [x] Relations!
-* [ ] Relation#includes
+* [x] Relation#includes
 * [ ] Relation search methods
 * [ ] Migrations!
