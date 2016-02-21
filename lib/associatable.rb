@@ -1,4 +1,5 @@
 require 'active_support/inflector'
+require 'byebug'
 
 class AssocOptions
   attr_accessor(
@@ -71,8 +72,8 @@ module Associatable
       source_options =
         through_options.model_class.assoc_options[source_name]
       through_pk = through_options.primary_key
-      key_val = self.send(through_fk)
-      
+      key_val = self.send(through_options.foreign_key)
+
       source_options.model_class.includes(through_options.model_class)
                                 .where(through_pk => key_val).first
     end
@@ -81,34 +82,16 @@ module Associatable
   def has_many_through(name, through_name, source_name)
     through_options = assoc_options[through_name]
     define_method(name) do
-      source_options =
-        through_options.model_class.assoc_options[source_name]
-
-      through_table = through_options.table_name
-      through_pk = through_options.primary_key
       through_fk = through_options.foreign_key
+      through_class = through_options.model_class
+      key_val = self.send(through_options.primary_key)
 
-      source_table = source_options.table_name
-      source_pk = source_options.primary_key
-      source_fk = source_options.foreign_key
-
-      key_val = self.send(through_pk)
-
-      puts "LOADING #{source_table}"
-      results = DBConnection.execute(<<-SQL, key_val)
-        SELECT
-          #{source_table}.*
-        FROM
-          #{source_table}
-        JOIN
-          #{through_table}
-        ON
-          #{through_table}.#{through_pk} = #{source_table}.#{source_fk}
-        WHERE
-          #{through_table}.#{through_fk} = ?
-      SQL
-
-      source_options.model_class.parse_all(results)
+      #2 queries, we could reduce to 1 by writing SQLRelation::join.
+      through_class.where(through_fk => key_val)
+                   .includes(source_name)
+                   .load
+                   .included_relation
+                   .to_a
     end
   end
 end

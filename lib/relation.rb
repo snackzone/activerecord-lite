@@ -1,8 +1,9 @@
 require_relative 'db_connection'
 require_relative 'sql_object'
+require 'byebug'
 
 class SQLRelation
-  attr_reader :klass, :collection, :loaded, :sql_count
+  attr_reader :klass, :collection, :loaded
   attr_accessor :included_relation
 
   def initialize(options)
@@ -61,6 +62,11 @@ class SQLRelation
     load
   end
 
+  def limit(n)
+    @sql_limit = n
+    self
+  end
+
   def includes(klass)
     @includes_params = klass
     self
@@ -73,16 +79,18 @@ class SQLRelation
   def load
     if !loaded
       puts "LOADING #{table_name}"
+      debugger
       results = DBConnection.execute(<<-SQL, *sql_params[:values])
         SELECT
-          #{self.sql_count ? "COUNT(*)" : self.table_name.to_s + ".*"}
+          #{sql_count ? "COUNT(*)" : self.table_name.to_s + ".*"}
         FROM
           #{self.table_name}
         #{sql_params[:where]}
-          #{sql_params[:params]};
+          #{sql_params[:params]}
+        #{"LIMIT #{sql_limit}" if sql_limit};
       SQL
 
-      results = self.sql_count ? results.first.values.first : parse_all(results)
+      results = sql_count ? results.first.values.first : parse_all(results)
     end
 
     results = results || self
@@ -143,13 +151,22 @@ class SQLRelation
         i_sql_obj.send(i_send) == self.send(b_send)
       end
 
-      has_many ? selection : selection.first
+      associated = has_many ? selection : selection.first
+
+      #After we find our values iteratively, we overwrite the method again
+      #to the result values to reduce future lookup time to O(1).
+      new_match = proc { associated }
+      SQLObject.define_singleton_method_by_proc(
+        self, base.includes_params, new_match)
+
+      associated
     end
 
-    #we monkey-patch the association method for each SQLObject in the
+    #we overwrite the association method for each SQLObject in the
     #collection so that it points to our cached relation and doesn't fire a query.
     base.collection.each do |b_sql_obj|
-      SQLObject.define_singleton_method_by_proc(b_sql_obj, base.includes_params, match)
+      SQLObject.define_singleton_method_by_proc(
+        b_sql_obj, base.includes_params, match)
     end
   end
 
@@ -160,4 +177,7 @@ class SQLRelation
   def method_missing(method, *args, &block)
     self.to_a.send(method, *args, &block)
   end
+
+  private
+  attr_reader :sql_count, :sql_limit
 end

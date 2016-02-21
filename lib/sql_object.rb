@@ -46,15 +46,7 @@ class SQLObject
   end
 
   def self.find(id)
-    results = DBConnection.execute(<<-SQL, id)
-      SELECT
-        *
-      FROM
-        #{self.table_name}
-      WHERE
-        id = ?;
-    SQL
-    (results.empty?) ? nil : self.new(results.first)
+    self.where(id: id).first
   end
 
   def initialize(params = {})
@@ -137,6 +129,10 @@ class SQLObject
   def self.define_singleton_method_by_proc(obj, name, block)
     metaclass = class << obj; self; end
     metaclass.send(:define_method, name, block)
+  end
+
+  def self.limit(num)
+    SQLRelation.new(klass: self).limit(num)
   end
 
   def self.includes(klass)
