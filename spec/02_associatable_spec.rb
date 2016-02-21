@@ -246,7 +246,6 @@ describe 'Associatable' do
 
     it 'returns an empty relation if no associated items' do
       catless_house = House.find(3)
-      p catless_house
       expect(catless_house.cats.length).to eq(0)
     end
   end

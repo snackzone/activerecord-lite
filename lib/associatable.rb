@@ -1,5 +1,4 @@
 require 'active_support/inflector'
-require 'byebug'
 
 class AssocOptions
   attr_accessor(
@@ -90,7 +89,8 @@ module Associatable
       through_class.where(through_fk => key_val)
                    .includes(source_name)
                    .load
-                   .included_relation
+                   .included_relations
+                   .first
                    .to_a
     end
   end

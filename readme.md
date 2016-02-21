@@ -49,11 +49,13 @@ If you fiddle with the code, you can run the tests to make sure you didn't break
   (you can also call SQLRelation#load to force this).
 
 ###Eager loading reduces queries
-* You can use SQLRelation#includes belongs_to and has_many relations to preload your associations
-  * Reduces your query count from (n + 1) to 2.
+* Preload has_many and belongs_to associations by calling SQLObject#includes
+  * Lazy and chainable.
+  * Reduces your DB queries from (n + 1) to 2.
 
 ###Coming Soon
-* [x] Relations!
+* [x] Relations
 * [x] Relation#includes
+* [ ] Relation#joins
 * [ ] Relation search methods
 * [ ] Migrations!

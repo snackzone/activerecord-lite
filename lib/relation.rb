@@ -1,24 +1,21 @@
 require_relative 'db_connection'
 require_relative 'sql_object'
-require 'byebug'
 
 class SQLRelation
-  attr_reader :klass, :collection, :loaded
-  attr_accessor :included_relation
+  attr_reader :klass, :collection, :loaded, :sql_count, :sql_limit
+  attr_accessor :included_relations
 
   def initialize(options)
     defaults =
     {
       klass: nil,
       loaded: false,
-      count: false,
       collection: []
     }
 
     @klass      = options[:klass]
     @collection = options[:collection] || defaults[:collection]
     @loaded     = options[:loaded]     || defaults[:loaded]
-    @sql_count  = options[:count]      || defaults[:count]
   end
 
   def table_name
@@ -68,19 +65,22 @@ class SQLRelation
   end
 
   def includes(klass)
-    @includes_params = klass
+    includes_params << klass
     self
   end
 
   def includes_params
-    @includes_params ||= nil
+    @includes_params ||= []
+  end
+
+  def included_relations
+    @included_relations ||= []
   end
 
   def load
     if !loaded
       puts "LOADING #{table_name}"
-      debugger
-      results = DBConnection.execute(<<-SQL, *sql_params[:values])
+        results = DBConnection.execute(<<-SQL, *sql_params[:values])
         SELECT
           #{sql_count ? "COUNT(*)" : self.table_name.to_s + ".*"}
         FROM
@@ -95,7 +95,7 @@ class SQLRelation
 
     results = results || self
 
-    if includes_params
+    unless includes_params.empty?
       results = load_includes(results)
     end
 
@@ -103,39 +103,41 @@ class SQLRelation
   end
 
   def load_includes(relation)
-    if relation.klass.has_association?(includes_params)
-      puts "LOADING #{includes_params.to_s}"
-      assoc = klass.assoc_options[includes_params]
-      f_k = assoc.foreign_key
-      p_k = assoc.primary_key
-      includes_table = assoc.table_name.to_s
-      in_ids = relation.collection.map do |sqlobject|
-        sqlobject.id
-      end.join(", ")
+    includes_params.each do |param|
+      if relation.klass.has_association?(param)
+        puts "LOADING #{param.to_s}"
+        assoc = klass.assoc_options[param]
+        f_k = assoc.foreign_key
+        p_k = assoc.primary_key
+        includes_table = assoc.table_name.to_s
+        in_ids = relation.collection.map do |sqlobject|
+          sqlobject.id
+        end.join(", ")
 
-      has_many = assoc.class == HasManyOptions
+        has_many = assoc.class == HasManyOptions
 
-      results = DBConnection.execute(<<-SQL)
-        SELECT
-          #{includes_table}.*
-        FROM
-          #{includes_table}
-        WHERE
-          #{includes_table}.#{has_many ? f_k : p_k}
-        IN
-          (#{in_ids});
-      SQL
-      included = assoc.model_class.parse_all(results)
-      SQLRelation.build_association(relation, included)
+        results = DBConnection.execute(<<-SQL)
+          SELECT
+            #{includes_table}.*
+          FROM
+            #{includes_table}
+          WHERE
+            #{includes_table}.#{has_many ? f_k : p_k}
+          IN
+            (#{in_ids});
+        SQL
+        included = assoc.model_class.parse_all(results)
+        SQLRelation.build_association(relation, included, param)
+      end
     end
 
     relation
   end
 
-  def self.build_association(base, included)
-    base.included_relation = included
+  def self.build_association(base, included, method_name)
+    base.included_relations << included
 
-    assoc_options = base.klass.assoc_options[base.includes_params]
+    assoc_options = base.klass.assoc_options[method_name]
     has_many = assoc_options.class == HasManyOptions
 
     if has_many
@@ -157,7 +159,7 @@ class SQLRelation
       #to the result values to reduce future lookup time to O(1).
       new_match = proc { associated }
       SQLObject.define_singleton_method_by_proc(
-        self, base.includes_params, new_match)
+        self, method_name, new_match)
 
       associated
     end
@@ -166,7 +168,7 @@ class SQLRelation
     #collection so that it points to our cached relation and doesn't fire a query.
     base.collection.each do |b_sql_obj|
       SQLObject.define_singleton_method_by_proc(
-        b_sql_obj, base.includes_params, match)
+        b_sql_obj, method_name, match)
     end
   end
 
@@ -177,7 +179,4 @@ class SQLRelation
   def method_missing(method, *args, &block)
     self.to_a.send(method, *args, &block)
   end
-
-  private
-  attr_reader :sql_count, :sql_limit
 end
