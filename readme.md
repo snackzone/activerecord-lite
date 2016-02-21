@@ -40,13 +40,23 @@ If you fiddle with the code, you can run the tests to make sure you didn't break
 * Has one through
 * Has many through
 
-###Did I mention it's searchable?
-* SQLObject#where takes a params hash.
-* #where method calls are:
-  * Stackable. SQLObject#where returns a Relation instance
-  * Manipulatable. SQLRelation instances respond to all Array instance methods
-  * Lazy. Queries only fire when necessary, i.e. when the SQLRelation is coerced into an array
-  (you can also call SQLRelation#load to force this).
+###SQLRelation
+Has the basic functionality of ActiveRecord::Relation, allowing us to
+order and search DB entries with minimal querying.
+
+All methods are lazy and stackable. Queries are only fired when SQLRelation#load
+is called or when the relation is coerced into an Array.
+
+Methods included:
+  * All
+  * Where
+  * Includes
+  * Find
+  * Order
+  * Limit
+  * Count
+  * First
+  * Last
 
 ###Eager loading reduces queries
 * Preload has_many and belongs_to associations by calling SQLObject#includes
@@ -57,5 +67,4 @@ If you fiddle with the code, you can run the tests to make sure you didn't break
 * [x] Relations
 * [x] Relation#includes
 * [ ] Relation#joins
-* [ ] Relation search methods
-* [ ] Migrations!
+* [ ] Migrations
