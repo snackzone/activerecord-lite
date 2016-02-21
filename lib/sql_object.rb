@@ -6,6 +6,20 @@ require 'active_support/inflector'
 class SQLObject
   extend Associatable
 
+  RELATION_METHODS = [
+    :limit, :includes, :where, :order
+  ]
+
+  RELATION_METHODS.each do |method|
+    define_singleton_method(method) do |arg|
+      SQLRelation.new(klass: self).send(method, arg)
+    end
+  end
+
+  def self.all
+    where({})
+  end
+
   def self.columns
     @table ||= DBConnection.execute2(<<-SQL)
       SELECT
@@ -14,6 +28,21 @@ class SQLObject
         #{self.table_name};
       SQL
     @table.first.map(&:to_sym)
+  end
+
+  def self.count
+    all.count
+  end
+
+  def self.define_singleton_method_by_proc(obj, name, block)
+    metaclass = class << obj; self; end
+    metaclass.send(:define_method, name, block)
+  end
+
+  def self.destroy_all!
+    self.all.each do |entry|
+      entry.destroy!
+    end
   end
 
   def self.finalize!
@@ -28,12 +57,20 @@ class SQLObject
     end
   end
 
-  def self.table_name=(table_name)
-    @table_name = table_name
+  def self.find(id)
+    where(id: id).first
   end
 
-  def self.table_name
-    @table_name ||= self.to_s.downcase.tableize
+  def self.first
+    all.limit(1).first
+  end
+
+  def self.has_association?(association)
+    assoc_options.keys.include?(association)
+  end
+
+  def self.last
+    all.order(id: :desc).limit(1).first
   end
 
   def self.parse_all(results)
@@ -45,8 +82,12 @@ class SQLObject
     relation
   end
 
-  def self.find(id)
-    self.where(id: id).first
+  def self.table_name=(table_name)
+    @table_name = table_name
+  end
+
+  def self.table_name
+    @table_name ||= self.to_s.downcase.tableize
   end
 
   def initialize(params = {})
@@ -69,6 +110,19 @@ class SQLObject
     end
   end
 
+  def destroy!
+    if self.class.find(id)
+      DBConnection.execute(<<-SQL, id)
+        DELETE
+        FROM
+          #{self.class.table_name}
+        WHERE
+          id = ?
+      SQL
+      return self
+    end
+  end
+
   def insert
     column_names = self.class.columns.join(", ")
     question_marks = self.class.columns.map{|c| "?"}.join(", ")
@@ -81,6 +135,10 @@ class SQLObject
     SQL
     self.id = DBConnection.last_insert_row_id
     self
+  end
+
+  def save
+    self.class.find(id) ? update : insert
   end
 
   def update
@@ -97,57 +155,5 @@ class SQLObject
         id = ?
     SQL
     self
-  end
-
-  def save
-    self.class.find(id) ? update : insert
-  end
-
-  def destroy!
-    if self.class.find(id)
-      DBConnection.execute(<<-SQL, id)
-        DELETE
-        FROM
-          #{self.class.table_name}
-        WHERE
-          id = ?
-      SQL
-      return self
-    end
-  end
-
-  def self.destroy_all!
-    self.all.each do |entry|
-      entry.destroy!
-    end
-  end
-
-  def self.has_association?(association)
-    assoc_options.keys.include?(association)
-  end
-
-  def self.define_singleton_method_by_proc(obj, name, block)
-    metaclass = class << obj; self; end
-    metaclass.send(:define_method, name, block)
-  end
-
-  def self.limit(num)
-    SQLRelation.new(klass: self).limit(num)
-  end
-
-  def self.includes(klass)
-    SQLRelation.new(klass: self).includes(klass)
-  end
-
-  def self.where(params)
-    SQLRelation.new(klass: self).where(params)
-  end
-
-  def self.all
-    self.where({})
-  end
-
-  def self.count
-    self.all.count
   end
 end

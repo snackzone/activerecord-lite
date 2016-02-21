@@ -2,6 +2,44 @@ require_relative 'db_connection'
 require_relative 'sql_object'
 
 class SQLRelation
+  def self.build_association(base, included, method_name)
+    base.included_relations << included
+
+    assoc_options = base.klass.assoc_options[method_name]
+    has_many = assoc_options.class == HasManyOptions
+
+    if has_many
+      i_send = assoc_options.foreign_key
+      b_send = assoc_options.primary_key
+    else
+      i_send = assoc_options.primary_key
+      b_send = assoc_options.foreign_key
+    end
+
+    match = proc do
+      selection = included.select do |i_sql_obj|
+        i_sql_obj.send(i_send) == self.send(b_send)
+      end
+
+      associated = has_many ? selection : selection.first
+
+      #After we find our values iteratively, we overwrite the method again
+      #to the result values to reduce future lookup time to O(1).
+      new_match = proc { associated }
+      SQLObject.define_singleton_method_by_proc(
+        self, method_name, new_match)
+
+      associated
+    end
+
+    #we overwrite the association method for each SQLObject in the
+    #collection so that it points to our cached relation and doesn't fire a query.
+    base.collection.each do |b_sql_obj|
+      SQLObject.define_singleton_method_by_proc(
+        b_sql_obj, method_name, match)
+    end
+  end
+
   attr_reader :klass, :collection, :loaded, :sql_count, :sql_limit
   attr_accessor :included_relations
 
@@ -18,40 +56,10 @@ class SQLRelation
     @loaded     = options[:loaded]     || defaults[:loaded]
   end
 
-  def table_name
-    klass.table_name
-  end
-
   def <<(item)
     if item.class == klass
       @collection << item
     end
-  end
-
-  def to_a
-    self.load.collection
-  end
-
-  def where_params_hash
-    @where_params_hash ||= {}
-  end
-
-  def where(params)
-    where_params_hash.merge!(params)
-    self
-  end
-
-  def sql_params
-    params, values = [], []
-
-    where_params_hash.map do |attribute, value|
-      params << "#{attribute} = ?"
-      values << value
-    end
-
-    { params: params.join(" AND "),
-      where: params.empty? ? nil : "WHERE",
-      values: values }
   end
 
   def count
@@ -59,9 +67,8 @@ class SQLRelation
     load
   end
 
-  def limit(n)
-    @sql_limit = n
-    self
+  def included_relations
+    @included_relations ||= []
   end
 
   def includes(klass)
@@ -73,8 +80,9 @@ class SQLRelation
     @includes_params ||= []
   end
 
-  def included_relations
-    @included_relations ||= []
+  def limit(n)
+    @sql_limit = n
+    self
   end
 
   def load
@@ -87,6 +95,7 @@ class SQLRelation
           #{self.table_name}
         #{sql_params[:where]}
           #{sql_params[:params]}
+        #{order_by_string}
         #{"LIMIT #{sql_limit}" if sql_limit};
       SQL
 
@@ -134,49 +143,62 @@ class SQLRelation
     relation
   end
 
-  def self.build_association(base, included, method_name)
-    base.included_relations << included
-
-    assoc_options = base.klass.assoc_options[method_name]
-    has_many = assoc_options.class == HasManyOptions
-
-    if has_many
-      i_send = assoc_options.foreign_key
-      b_send = assoc_options.primary_key
+  def method_missing(method, *args, &block)
+    self.to_a.send(method, *args, &block)
+  end
+  
+  def order(params)
+    if params.is_a?(Hash)
+      order_params_hash.merge!(params)
     else
-      i_send = assoc_options.primary_key
-      b_send = assoc_options.foreign_key
+      order_params_hash.merge!(params => :asc)
     end
+    self
+  end
 
-    match = proc do
-      selection = included.select do |i_sql_obj|
-        i_sql_obj.send(i_send) == self.send(b_send)
-      end
+  def order_params_hash
+    @order_params_hash ||= {}
+  end
 
-      associated = has_many ? selection : selection.first
+  def order_by_string
+    hash_string = order_params_hash.map do |column, asc_desc|
+      "#{column} #{asc_desc.to_s.upcase}"
+    end.join(", ")
 
-      #After we find our values iteratively, we overwrite the method again
-      #to the result values to reduce future lookup time to O(1).
-      new_match = proc { associated }
-      SQLObject.define_singleton_method_by_proc(
-        self, method_name, new_match)
-
-      associated
-    end
-
-    #we overwrite the association method for each SQLObject in the
-    #collection so that it points to our cached relation and doesn't fire a query.
-    base.collection.each do |b_sql_obj|
-      SQLObject.define_singleton_method_by_proc(
-        b_sql_obj, method_name, match)
-    end
+    hash_string.empty? ? "" : "ORDER BY #{hash_string}"
   end
 
   def parse_all(attributes)
     klass.parse_all(attributes).where(where_params_hash).includes(includes_params)
   end
 
-  def method_missing(method, *args, &block)
-    self.to_a.send(method, *args, &block)
+  def sql_params
+    params, values = [], []
+
+    where_params_hash.map do |attribute, value|
+      params << "#{attribute} = ?"
+      values << value
+    end
+
+    { params: params.join(" AND "),
+      where: params.empty? ? nil : "WHERE",
+      values: values }
+  end
+
+  def table_name
+    klass.table_name
+  end
+
+  def to_a
+    self.load.collection
+  end
+
+  def where_params_hash
+    @where_params_hash ||= {}
+  end
+
+  def where(params)
+    where_params_hash.merge!(params)
+    self
   end
 end
