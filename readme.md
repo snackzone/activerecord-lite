@@ -40,14 +40,14 @@ If you fiddle with the code, you can run the tests to make sure you didn't break
 * Has one through
 * Has many through
 
-###SQLRelation
+##SQLRelation
 Has the basic functionality of ActiveRecord::Relation, allowing us to
 order and search DB entries with minimal querying.
 
 All methods are lazy and stackable. Queries are only fired when SQLRelation#load
 is called or when the relation is coerced into an Array.
 
-Methods included:
+###Methods included:
   * All
   * Where
   * Includes
@@ -63,7 +63,7 @@ Methods included:
   * Lazy and chainable.
   * Reduces your DB queries from (n + 1) to 2.
 
-###Coming Soon
+##Coming Soon
 * [x] Relations
 * [x] Relation#includes
 * [ ] Relation#joins
